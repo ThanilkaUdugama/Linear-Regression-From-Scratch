@@ -1,3 +1,4 @@
+import os
 import random
 import math
 import pandas
@@ -90,7 +91,6 @@ class CustomDataFrame:
             self.labels.append(df[label][i])
 
     def get_categorical_features(self):
-        print(self.categorical_features)
         return numpy.array(self.categorical_features)
 
     def get_numerical_features(self):
@@ -106,7 +106,6 @@ class LinearRegression:
     def __init__(self, dataframe):
         self.features = dataframe.get_numerical_features()
         self.categories = dataframe.get_categorical_features()
-        print(self.categories)
         self.labels = dataframe.get_labels()
         self.temp_weights = []
         self.epochs = []
@@ -129,7 +128,7 @@ class LinearRegression:
                                                                                                  1) * numpy.expand_dims(
             numpy.expand_dims(residules, residules.ndim), residules.ndim + 1)).sum(0)
 
-    def validate_step(self, steps):
+    def validate_step(self, steps, error_treshold):
         step = None
         step_error = None
         current_error = self.error()
@@ -145,7 +144,8 @@ class LinearRegression:
                     step_error = temp_cur_error
             self.reverse_step()
 
-        if current_error > step_error:
+        if current_error > step_error and ((current_error - step_error)/current_error) > error_treshold:
+            print(((current_error - step_error)/current_error))
             return step
         else:
             return -1
@@ -176,12 +176,11 @@ class LinearRegression:
     def get_F_value(self):
         pass
 
-    def train(self, steps_count=4):
+    def train(self, steps_count=10, error_chng_threshold = 0.01):
         steps = [1 / (10 ** (x + 1)) for x in range(steps_count)]
-        steps = [0.0000001]
         ephoc = 0
         while True:
-            step = self.validate_step(steps)
+            step = self.validate_step(steps, error_chng_threshold)
             if step == -1:
                 break
 
@@ -190,7 +189,15 @@ class LinearRegression:
             self.epochs.append(ephoc)
             ephoc += 1
             print(f"{math.sqrt(self.error()/len(df))} - ({self.error()})")
-            # print(self.weights)
+
+    def save_model(self, filename):
+        if 'models' not in os.listdir():
+            os.system('mkdir models')
+        numpy.save(f'models/{filename}.npy', self.weights)
+
+    def load_model(self, filename):
+        self.weights = numpy.load(f'models/{filename}.npy')
+
 
         # while True:
         #     for step in steps:
@@ -214,9 +221,11 @@ class LinearRegression:
 
 
 n = LinearRegression(my_df)
-n.train(100)
-n.predict(df)
-n.visualize()
+# n.load_model('model0')
+n.train(10)
+n.save_model('model0')
+# n.predict(df)
+# n.visualize()
 # for i in range(10):
 #     n.backpropagate(0.01)
 
